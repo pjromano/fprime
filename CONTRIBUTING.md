@@ -151,7 +151,7 @@ The tests can be run using the following commands:
 
 ```bash
 # Go into the fprime directory
-cp MY_FPRIME_DIRECTORY
+cd MY_FPRIME_DIRECTORY
 
 # Run CI tests on fprime
 ./ci/tests/Framework.bash
