@@ -1,0 +1,200 @@
+# Temporary workflow to run a macOS test on a development branch of fprime
+# with a development branch of fprime-tools
+
+name: CI-custom-fprime-tools [macOS]
+
+# Run this temporary workflow on every push
+on: push
+# Workflow trigger as copied from built-test-macos.yml:
+### Controls when the action will run. Triggers the workflow on push or pull request
+### events but only for the master branch
+##  push:
+##    branches: [ devel, release/** ]
+##  pull_request:
+##    # The branches below must be a subset of the branches above
+##    branches: [ devel, release/** ]
+##    paths-ignore:
+##      - 'docs/**'
+##      - '**.md'
+##      - '.github/actions/spelling/**'
+##      - '.github/ISSUE_TEMPLATE/**'
+# Cancel in-progress runs if a newer run is started on a given PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ !contains(github.ref, 'devel') && !contains(github.ref, 'release/')}}
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  macOS-Framework:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+    - name: "Checkout F´ Repository"
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: true
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12' 
+    - uses: ./.github/actions/setup
+
+    # Set up custom version of fprime-tools
+    - run: pwd ; ls -al
+    - run: echo $VIRTUAL_ENV
+    - run: pip show --files fprime-tools
+    - run: 'pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g"'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x/fprime'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x/fprime/cookiecutter_templates/cookiecutter-fprime-deployment/\{\{cookiecutter.deployment_name\}\}/Top/\{\{cookiecutter.deployment_name\}\}Topology.cpp'
+    - name: "Display contents of Topology.cpp cookiecutter with as-released fprime-tools"
+      run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; cat $x/fprime/cookiecutter_templates/cookiecutter-fprime-deployment/\{\{cookiecutter.deployment_name\}\}/Top/\{\{cookiecutter.deployment_name\}\}Topology.cpp'
+    - name: "Uninstall fprime-tools from pip"
+      run: pip3 uninstall --yes fprime-tools
+    - name: "Confirm fprime-util is not in PATH"
+      run: "! which fprime-util"
+      shell: bash
+    - name: "Clone custom version of fprime-tools into current fprime directory"
+      run: git clone --branch fix-task-priorities https://github.com/pjromano/fprime-tools.git
+    - name: "Install custom fprime-tools with pip"
+      run: pip3 install ./fprime-tools
+    - name: "Confirm fprime-util is in PATH"
+      run: which fprime-util
+      shell: bash
+    - run: pip show --files fprime-tools
+    - run: 'pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g"'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x/fprime'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x/fprime/cookiecutter_templates/cookiecutter-fprime-deployment/\{\{cookiecutter.deployment_name\}\}/Top/\{\{cookiecutter.deployment_name\}\}Topology.cpp'
+    - name: "Display contents of Topology.cpp cookiecutter with modified fprime-tools"
+      run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; cat $x/fprime/cookiecutter_templates/cookiecutter-fprime-deployment/\{\{cookiecutter.deployment_name\}\}/Top/\{\{cookiecutter.deployment_name\}\}Topology.cpp'
+
+    - name: F prime CI step
+      run: ./ci/tests/Framework.bash
+      env:
+        # Limit to 2 jobs to avoid resource exhaustion (https://github.com/nasa/fprime/issues/2462)
+        JOBS: 2
+    # Archive the outputs
+    - name: 'Archive Logs'
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: ci-framework-logs
+        path: ci-logs.tar.gz
+        retention-days: 5
+
+  macOS-Ref:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+    - name: "Checkout F´ Repository"
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: true
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12' 
+    - uses: ./.github/actions/setup
+
+    # Set up custom version of fprime-tools
+    - run: pwd ; ls -al
+    - run: echo $VIRTUAL_ENV
+    - run: pip show --files fprime-tools
+    - run: 'pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g"'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x/fprime'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x/fprime/cookiecutter_templates/cookiecutter-fprime-deployment/\{\{cookiecutter.deployment_name\}\}/Top/\{\{cookiecutter.deployment_name\}\}Topology.cpp'
+    - name: "Display contents of Topology.cpp cookiecutter with as-released fprime-tools"
+      run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; cat $x/fprime/cookiecutter_templates/cookiecutter-fprime-deployment/\{\{cookiecutter.deployment_name\}\}/Top/\{\{cookiecutter.deployment_name\}\}Topology.cpp'
+    - name: "Uninstall fprime-tools from pip"
+      run: pip3 uninstall --yes fprime-tools
+    - name: "Confirm fprime-util is not in PATH"
+      run: "! which fprime-util"
+      shell: bash
+    - name: "Clone custom version of fprime-tools into current fprime directory"
+      run: git clone --branch fix-task-priorities https://github.com/pjromano/fprime-tools.git
+    - name: "Install custom fprime-tools with pip"
+      run: pip3 install ./fprime-tools
+    - name: "Confirm fprime-util is in PATH"
+      run: which fprime-util
+      shell: bash
+    - run: pip show --files fprime-tools
+    - run: 'pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g"'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x/fprime'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x/fprime/cookiecutter_templates/cookiecutter-fprime-deployment/\{\{cookiecutter.deployment_name\}\}/Top/\{\{cookiecutter.deployment_name\}\}Topology.cpp'
+    - name: "Display contents of Topology.cpp cookiecutter with modified fprime-tools"
+      run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; cat $x/fprime/cookiecutter_templates/cookiecutter-fprime-deployment/\{\{cookiecutter.deployment_name\}\}/Top/\{\{cookiecutter.deployment_name\}\}Topology.cpp'
+
+    - name: F prime CI step
+      run: ./ci/tests/Ref.bash
+      env:
+        JOBS: 2
+    # Archive the outputs
+    - name: 'Archive Logs'
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: ci-ref-logs
+        path: ci-logs.tar.gz
+        retention-days: 5
+
+  macOS-Integration:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+    - name: "Checkout F´ Repository"
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: true
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12' 
+    - uses: ./.github/actions/setup
+
+    # Set up custom version of fprime-tools
+    - run: pwd ; ls -al
+    - run: echo $VIRTUAL_ENV
+    - run: pip show --files fprime-tools
+    - run: 'pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g"'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x/fprime'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x/fprime/cookiecutter_templates/cookiecutter-fprime-deployment/\{\{cookiecutter.deployment_name\}\}/Top/\{\{cookiecutter.deployment_name\}\}Topology.cpp'
+    - name: "Display contents of Topology.cpp cookiecutter with as-released fprime-tools"
+      run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; cat $x/fprime/cookiecutter_templates/cookiecutter-fprime-deployment/\{\{cookiecutter.deployment_name\}\}/Top/\{\{cookiecutter.deployment_name\}\}Topology.cpp'
+    - name: "Uninstall fprime-tools from pip"
+      run: pip3 uninstall --yes fprime-tools
+    - name: "Confirm fprime-util is not in PATH"
+      run: "! which fprime-util"
+      shell: bash
+    - name: "Clone custom version of fprime-tools into current fprime directory"
+      run: git clone --branch fix-task-priorities https://github.com/pjromano/fprime-tools.git
+    - name: "Install custom fprime-tools with pip"
+      run: pip3 install ./fprime-tools
+    - name: "Confirm fprime-util is in PATH"
+      run: which fprime-util
+      shell: bash
+    - run: pip show --files fprime-tools
+    - run: 'pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g"'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x/fprime'
+    - run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; ls -al $x/fprime/cookiecutter_templates/cookiecutter-fprime-deployment/\{\{cookiecutter.deployment_name\}\}/Top/\{\{cookiecutter.deployment_name\}\}Topology.cpp'
+    - name: "Display contents of Topology.cpp cookiecutter with modified fprime-tools"
+      run: 'x=$(pip show fprime-tools | grep "Location:" | sed -e "s/Location: //g") ; cat $x/fprime/cookiecutter_templates/cookiecutter-fprime-deployment/\{\{cookiecutter.deployment_name\}\}/Top/\{\{cookiecutter.deployment_name\}\}Topology.cpp'
+
+    - name: Install coreutils
+      run: brew install coreutils
+    - name: F prime CI step
+      run: ./ci/tests/30-ints.bash
+      env:
+        JOBS: 2
+    # Archive the outputs
+    - name: 'Archive Logs'
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: ci-int-logs
+        path: ci-logs.tar.gz
+        retention-days: 5
