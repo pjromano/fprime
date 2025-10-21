@@ -13,8 +13,8 @@ module ComCcsdsConfig {
     }
 
     module Priorities {
-        constant comQueue   = 101
-        constant aggregator = 100
+        constant comQueue   = 24
+        constant aggregator = 23
     }
 
     # Queue configuration constants
