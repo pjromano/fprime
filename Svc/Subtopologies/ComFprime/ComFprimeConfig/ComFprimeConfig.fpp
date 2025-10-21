@@ -11,7 +11,7 @@ module ComFprimeConfig {
     }
 
     module Priorities {
-        constant comQueue   = 24
+        constant comQueue   = 29
     }
 
     # Queue configuration constants
